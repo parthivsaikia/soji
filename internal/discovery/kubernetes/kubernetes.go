@@ -81,3 +81,23 @@ func getDeploymentImages(client *kubernetes.Clientset, namespace string) ([]stri
 	}
 	return res, nil
 }
+
+func getStatefulsetImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	statefulsets, err := client.AppsV1().StatefulSets(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting statefulsets: %w", err)
+	}
+	for _, statefulset := range statefulsets.Items {
+		for _, i := range statefulset.Spec.Template.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range statefulset.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range statefulset.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
