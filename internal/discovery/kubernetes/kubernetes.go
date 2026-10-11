@@ -161,3 +161,23 @@ func getJobImages(client *kubernetes.Clientset, namespace string) ([]string, err
 	}
 	return res, nil
 }
+
+func getReplicasetImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	replicasets, err := client.AppsV1().ReplicaSets(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting replicasets: %w", err)
+	}
+	for _, replicaset := range replicasets.Items {
+		for _, i := range replicaset.Spec.Template.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range replicaset.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range replicaset.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
