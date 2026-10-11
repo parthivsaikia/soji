@@ -181,3 +181,23 @@ func getReplicasetImages(client *kubernetes.Clientset, namespace string) ([]stri
 	}
 	return res, nil
 }
+
+func getReplicationControllerImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	replicationControllers, err := client.CoreV1().ReplicationControllers(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting replication controllers: %w", err)
+	}
+	for _, replicationController := range replicationControllers.Items {
+		for _, i := range replicationController.Spec.Template.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range replicationController.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range replicationController.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
