@@ -46,7 +46,7 @@ func getPodImages(client *kubernetes.Clientset, namespace string) ([]string, err
 	res := []string{}
 	pods, err := client.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return res, fmt.Errorf("error in getting pod images: %w", err)
+		return res, fmt.Errorf("error in getting pods: %w", err)
 	}
 	for _, pod := range pods.Items {
 		for _, i := range pod.Spec.InitContainers {
@@ -57,6 +57,26 @@ func getPodImages(client *kubernetes.Clientset, namespace string) ([]string, err
 		}
 		for _, i := range pod.Spec.EphemeralContainers {
 			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
+
+func getDeploymentImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	deployments, err := client.AppsV1().Deployments("default").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting deployments: %w", err)
+	}
+	for _, deployment := range deployments.Items {
+		for _, i := range deployment.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Image)
+		}
+		for _, i := range deployment.Spec.Template.Spec.Containers {
+			res = append(res, i.Image)
+		}
+		for _, i := range deployment.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Image)
 		}
 	}
 	return res, nil
