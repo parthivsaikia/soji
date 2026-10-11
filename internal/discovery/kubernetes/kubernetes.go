@@ -101,3 +101,23 @@ func getStatefulsetImages(client *kubernetes.Clientset, namespace string) ([]str
 	}
 	return res, nil
 }
+
+func getDaemonsetImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	daemonsets, err := client.AppsV1().DaemonSets(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting daemonsets: %w", err)
+	}
+	for _, daemonset := range daemonsets.Items {
+		for _, i := range daemonset.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range daemonset.Spec.Template.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range daemonset.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
