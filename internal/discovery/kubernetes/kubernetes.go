@@ -41,3 +41,23 @@ func FindCurrentlyUsedImage() ([]string, error) {
 	}
 	return images, nil
 }
+
+func getPodImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	pods, err := client.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting pod images: %w", err)
+	}
+	for _, pod := range pods.Items {
+		for _, i := range pod.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range pod.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range pod.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
