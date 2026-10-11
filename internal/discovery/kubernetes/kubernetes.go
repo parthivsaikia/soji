@@ -121,3 +121,23 @@ func getDaemonsetImages(client *kubernetes.Clientset, namespace string) ([]strin
 	}
 	return res, nil
 }
+
+func getCronjobImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	cronjobs, err := client.BatchV1().CronJobs(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting cronjobs: %w", err)
+	}
+	for _, cronjob := range cronjobs.Items {
+		for _, i := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range cronjob.Spec.JobTemplate.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range cronjob.Spec.JobTemplate.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
