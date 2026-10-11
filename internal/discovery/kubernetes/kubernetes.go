@@ -141,3 +141,23 @@ func getCronjobImages(client *kubernetes.Clientset, namespace string) ([]string,
 	}
 	return res, nil
 }
+
+func getJobImages(client *kubernetes.Clientset, namespace string) ([]string, error) {
+	res := []string{}
+	jobs, err := client.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return res, fmt.Errorf("error in getting jobs: %w", err)
+	}
+	for _, job := range jobs.Items {
+		for _, i := range job.Spec.Template.Spec.Containers {
+			res = append(res, i.Name)
+		}
+		for _, i := range job.Spec.Template.Spec.InitContainers {
+			res = append(res, i.Name)
+		}
+		for _, i := range job.Spec.Template.Spec.EphemeralContainers {
+			res = append(res, i.Name)
+		}
+	}
+	return res, nil
+}
