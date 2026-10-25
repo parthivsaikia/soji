@@ -1,12 +1,53 @@
 package plan
 
-import "github.com/parthivsaikia/soji/internal/discovery/kubernetes"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
 
-func Plan() ([]string, error) {
-	kubeconfig := "/home/parthiv/.kube/config"
-	images, err := kubernetes.FindCurrentlyUsedImage(kubeconfig)
-	if err != nil {
-		return images, err
+	"github.com/parthivsaikia/soji/internal/discovery/kubernetes"
+	"github.com/parthivsaikia/soji/internal/discovery/registry"
+	"github.com/parthivsaikia/soji/internal/discovery/registry/dockerhub"
+	"github.com/parthivsaikia/soji/internal/parser"
+)
+
+func Plan(kubeconfig, url string, private bool) error {
+	if kubeconfig == "" {
+		kubeconfig = os.Getenv("KUBECONFIG")
 	}
-	return images, nil
+	if kubeconfig == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("error in getting kubeconfig file: %w", err)
+		}
+		kubeconfig = filepath.Join(home, ".kube", "config")
+	}
+	target, err := parser.Parse(url)
+	if err != nil {
+		return err
+	}
+	if target.Provider != parser.ProviderDockerHub {
+		return fmt.Errorf("provider not supported")
+	}
+	dockerhubReg := dockerhub.DockerHubRegistry{
+		Namespace:   target.Path,
+		ReadPrivate: private,
+	}
+	registryImages, err := registry.Discover(dockerhubReg)
+	fmt.Println("registry images...")
+	for _, i := range registryImages {
+		fmt.Println(i)
+	}
+	if err != nil {
+		return err
+	}
+	k8sImages, err := kubernetes.FindCurrentlyUsedImage(kubeconfig)
+	fmt.Println("k8s images...")
+	for _, i := range k8sImages {
+		fmt.Println(i)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
