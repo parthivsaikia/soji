@@ -3,11 +3,13 @@ package dockerhub
 import (
 	"encoding/base64"
 	"encoding/json"
+	jsonV2 "encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 const DockerHubAPI = "https://hub.docker.com"
@@ -38,8 +40,19 @@ func (r DockerHubRegistry) Discover() ([]string, error) {
 	if err != nil {
 		return []string{}, fmt.Errorf("error in reading body from dockerhub: %w", err)
 	}
-	fmt.Println(string(data))
-	return []string{}, nil
+	res := RepositoryResponse{}
+	err = jsonV2.Unmarshal(data, &res)
+	if err != nil {
+		return []string{}, fmt.Errorf("error in unmarshalling data: %w", err)
+	}
+	images := []string{}
+	for _, repository := range res.Results {
+		if !isImageRepository(repository) {
+			continue
+		}
+		images = append(images, repository.Name)
+	}
+	return images, nil
 }
 
 func getAuthToken() (string, error) {
@@ -85,4 +98,15 @@ func Base64Decode(s string) string {
 		panic(err)
 	}
 	return string(decodedBytes)
+}
+
+func isImageRepository(repository Repository) bool {
+	switch repository.RepositoryType {
+	case "image":
+		return true
+	case "":
+		return slices.Contains(repository.ContentTypes, "image")
+	default:
+		return false
+	}
 }
